@@ -1,0 +1,325 @@
+<html>
+
+<head>
+	<title>Posição de ERBs em Vitória - ES</title>
+	
+	<style>
+		body {
+			background-color: #eeeeee;
+		}
+		
+		#grad {
+			background: -webkit-linear-gradient(red, blue); /* For Safari 5.1 to 6.0 */
+			background: -o-linear-gradient(red, blue); /* For Opera 11.1 to 12.0 */
+			background: -moz-linear-gradient(red, blue); /* For Firefox 3.6 to 15 */
+			background: linear-gradient(#eeeeee, #666666); /* Standard syntax */
+		}
+
+		#titulo {
+			float: left;
+			font-family: trebuchet, verdana, arial, sans-serif;
+			font-size: 25pt;
+			color: #414B96;
+			width: 98%;
+			border: 1px solid #414B96;
+			padding: 10px;
+			background-color: #ffffff;
+		}
+		
+		#mapa {
+			float: left;
+			width: 80%;
+			height: 550px;
+			border: 1px solid #414B96;
+			margin-top: 20px;
+		}
+		
+		#controles {
+			float: right;
+			width: 18%;
+			height: 550px;
+			border: 1px solid #414B96;
+			background-color: #ffffff;
+			margin-top: 20px;
+			margin-right: 4pt;
+			text-align: center;
+			padding-top: 5px;
+			font-family: trebuchet, verdana, arial, sans-serif;
+			font-size: 10pt;
+			color: #414B96;
+		}
+		
+		#content {
+			float: left;
+			border: 1px solid #414B96;
+			background-color: #ffffff;
+			margin-top: 20px;
+			margin-right: 4pt;
+			text-align: center;
+			padding-top: 5px;
+			font-family: trebuchet, verdana, arial, sans-serif;
+			font-size: 10pt;
+			color: #414B96;
+		}
+		
+		input[type="button"] {
+			font-family: trebuchet, verdana, arial, sans-serif;
+			font-size: 10pt;
+			color: #414B96;
+			border: 1px solid #414B96;
+			padding: 6px;
+			margin-left: 5px;
+			background-color: #eeeeee;
+			cursor: hand;
+		}
+		
+		input[type="text"] {
+			font-family: trebuchet, verdana, arial, sans-serif;
+			font-size: 10pt;
+			color: #414B96;
+			border: 1px solid #414B96;
+			padding: 6px;
+			margin-left: 5px;
+			background-color: #ffffff;
+		}
+		
+		select {
+			font-family: trebuchet, verdana, arial, sans-serif;
+			font-size: 10pt;
+			color: #414B96;
+			border: 1px solid #414B96;
+			padding: 6px;
+			margin-left: 5px;
+			background-color: #ffffff;
+			width: 95%;
+		}
+		</style>
+		<link href="/apis/fusiontables/docs/samples/style/default.css" rel="stylesheet" type="text/css">
+		<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script>
+		<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+		<script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?key=AIzaSyCyRa1MbHNk5ZaMYae7F4MvrNYh30631JU&sensor=true"></script>
+		
+		<script type="text/javascript">
+		
+		var map;
+		var geocoder;
+		var camada;
+		var table = '13IE1y4uyM5kgSAMdzku5BgsB7E0jBdankS0_eT73';
+		var curPos;
+		var markers = [];
+		
+		google.load('visualization', '1');
+		
+		function initialize() {
+			
+			var myLatLng = new google.maps.LatLng(-20.300600, -40.314581);
+			var opts = {
+				center: myLatLng,
+				zoom: 13,
+				mapTypeId: google.maps.MapTypeId.ROADMAP
+			};
+			  
+			map = new google.maps.Map(document.getElementById("mapa"), opts);
+			  
+			loadERBs();
+			
+			geocoder = new google.maps.Geocoder();
+		}
+		
+		function loadERBs() {
+			camada = new google.maps.FusionTablesLayer({
+				query:{
+					select: 'LATLONG',
+					from: table
+				}
+			});
+			
+			camada.setMap(map);
+		}
+		
+		function trataErro(err) {
+			if(err.code == 1) {
+				alert("Erro: Acesso negado!");
+			}else if( err.code == 2) {
+				alert("Erro: Localização indisponível!");
+			}
+		}
+		
+		function setYourPosition() {
+			if (navigator.geolocation) {
+				navigator.geolocation.getCurrentPosition(function(posicao) {
+				var posIni = new google.maps.LatLng(posicao.coords.latitude,
+													posicao.coords.longitude);
+				map.setCenter(posIni);
+				curPos = posIni;
+				
+				var infowindow = new google.maps.InfoWindow({
+					map: map,
+					position: posIni,
+					content: 'Você está aqui!<br/>' + posIni
+					});
+				}, trataErro);
+			}
+			else {
+				alert("Seu navegador não suporta geolocalização.");
+			}
+		}
+		
+		function buscaEndereco() {
+			var address = document.getElementById("txtEndereco").value;
+			geocoder.geocode( { 'address': address}, function(results, status) {
+				if (status == google.maps.GeocoderStatus.OK) {
+					map.panTo(results[0].geometry.location);
+					map.setZoom(15);
+					curPos = results[0].geometry.location;
+					var marker = new google.maps.Marker({
+						map: map,
+						position: results[0].geometry.location,
+						animation: google.maps.Animation.DROP
+					});
+					
+					markers.push(marker);
+					
+				} else {
+					alert("Não foi possível encontrar o endereço pelo seguinte motivo: " + status);
+				}
+			});
+		}
+		
+		function handler(response) {
+		  for (var i = 0; i < response.items.length; i++) {
+			var item = response.items[i];
+			// Either show the body or the automatic columns of the template
+			if (item.body) {
+			  document.getElementById("content").innerHTML += "<br>" + item.body;
+			} else {
+			  for (var j = 0; j < item.automaticColumnNames.length; j++) {
+				document.getElementById("content").innerHTML += "<br>" + item.automaticColumnNames[j];
+			  }
+			}
+		  }
+		}
+
+		function filtraOperadora(strOperadora) {
+		
+			camada.setOptions({
+				query:{
+					select: 'LATLONG',
+					from: table,
+					where: "OPERADORA = '" + strOperadora + "'"
+				}
+			});
+		}
+		
+		
+		function ERBMaisProxima() {
+		
+			if (!curPos) {
+				alert("ATENÇÃO:\nPosicione-se primeiro no mapa, clicando em 'Onde estou?' ou localizando um endereço.");
+			}
+			else {
+				var query = "SELECT LATLONG FROM " + table + " ORDER BY ST_DISTANCE(LATLONG, LATLNG" + curPos + ") LIMIT 1";
+				var encquery = encodeURIComponent(query);
+				var gvizQuery = new google.visualization.Query('http://www.google.com/fusiontables/gvizdata?tq=' + encquery);
+				gvizQuery.send(function(response) {
+					if (response.isError()) {
+						alert(response.getMessage() + "\n" + response.getDetailedMessage() + "\n" + response.getReasons() + "\n" + query);
+					}
+					else {
+						var stringCoordinates = response.getDataTable().getValue(0, 0);
+						
+						var conteudo = document.getElementById("content");
+						
+						var lat = stringCoordinates.substr(0, 14);
+						var lng = stringCoordinates.substr(14, 14);
+						lat = lat.replace("''", "");
+						lng = lng.replace("''", "");
+						
+						lat = lat.replace("'", "|");
+						lng = lng.replace("'", "|");
+						
+						lat = lat.replace("º", "|");
+						lng = lng.replace("º", "|");
+						
+						aLat = lat.split("|");
+						aLng = lng.split("|");
+						
+						var modLat, modLng;
+						
+						if (parseFloat(aLat[0]) < 0) {
+							modLat = -1
+						}
+						else {
+							modLat = 1;
+						}
+						
+						if (parseFloat(aLng[0]) < 0) {
+							modLng = -1
+						}
+						else {
+							modLng = 1;
+						}
+						
+						fLat = parseFloat(aLat[0]) + (parseFloat(aLat[1]) * modLat / 60) + (parseFloat(aLat[2]) * modLat /(60*60));
+						fLng = parseFloat(aLng[0]) + (parseFloat(aLng[1]) * modLng /60) + (parseFloat(aLng[2]) * modLng /(60*60));
+						
+						conteudo.innerHTML = "<pre>" + fLat + "," + fLng + "</pre>";
+						
+						var coordinate = new google.maps.LatLng(fLat, fLng);
+						var marker = new google.maps.Marker({
+							map: map,
+							position: coordinate,
+							animation: google.maps.Animation.DROP
+						});
+
+						markers.push(marker);
+					}
+				});
+			}
+		}
+		
+		function setAllMap(map) {
+		  for (var i = 0; i < markers.length; i++) {
+			markers[i].setMap(map);
+		  }
+		}
+		
+		function clearMarkers() {
+		  setAllMap(null);
+		}
+		
+		function deleteMarkers() {
+		  clearMarkers();
+		  markers = [];
+		}
+		
+		</script>
+		
+</head>
+
+<body onload="initialize()" id="grad">
+
+<div id="titulo">Posição de ERBs em Vitória - ES</div>
+
+<div id="mapa"></div>
+
+<div id="controles">
+	<input type="button" value="Onde estou?" onclick="setYourPosition()" style="width:95%">
+	<br/><br/>
+	Localizar endereço:<br/>
+	<input type="text" id="txtEndereco" style="width:95%">
+	<input type="button" value="Localizar!" onclick="buscaEndereco()" style="width:95%"><br/>
+	<br/>
+	<select onchange="filtraOperadora(this.value)">
+		<option value="" selected>Escolha a operadora:</option>
+		<option value="VIVO">Vivo</option>
+		<option value="OI">Oi</option>
+	</select><br/><br/>
+	<input type="button" value="ERB Mais Próxima" onclick="ERBMaisProxima()" style="width:95%">
+	<br/><br/>
+	<input type="button" value="Lipar Marcadores" onclick="deleteMarkers()" style="width:95%">
+</div>
+<div id="content"></div>
+<script src="https://www.googleapis.com/fusiontables/v1/tables/13IE1y4uyM5kgSAMdzku5BgsB7E0jBdankS0_eT73/templates?callback=handler&key=AIzaSyCyRa1MbHNk5ZaMYae7F4MvrNYh30631JU"></script>
+</body>
+</html>
