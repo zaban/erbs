@@ -1,3 +1,4 @@
+
 <html>
 
 <head>
@@ -17,13 +18,13 @@
 
 		#titulo {
 			float: left;
-			font-family: trebuchet, verdana, arial, sans-serif;
+			font-family: trebuchet, arial, verdana, sans-serif;
 			font-size: 25pt;
 			color: #414B96;
 			width: 98%;
-			border: 1px solid #414B96;
+			/*border: 1px solid #414B96;
 			padding: 10px;
-			background-color: #ffffff;
+			background-color: #ffffff;*/
 		}
 		
 		#mapa {
@@ -104,7 +105,7 @@
 		var map;
 		var geocoder;
 		var camada;
-		var table = '13IE1y4uyM5kgSAMdzku5BgsB7E0jBdankS0_eT73';
+		var table = '18itv4yUsMdcLar7agvT5iXOL-lLL38VLFua3HHfJ';
 		var curPos;
 		var markers = [];
 		
@@ -116,7 +117,7 @@
 			var opts = {
 				center: myLatLng,
 				zoom: 13,
-				mapTypeId: google.maps.MapTypeId.ROADMAP
+				mapTypeId: google.maps.MapTypeId.TERRAIN
 			};
 			  
 			map = new google.maps.Map(document.getElementById("mapa"), opts);
@@ -131,9 +132,34 @@
 				query:{
 					select: 'LATLONG',
 					from: table
-				}
+				},
+				styles: [{
+				    markerOptions: {
+				      iconName: "small_red"
+				    }
+				  }, {
+				    where: "OPERADORA = 'VIVO'",
+				    markerOptions: {
+				     iconName: "small_green"
+				    }
+				  }, {
+				    where: "OPERADORA = 'OI'",
+				    markerOptions: {
+				     iconName: "small_purple"
+				    }
+				  }, {
+				    where: "OPERADORA = 'CLARO'",
+				    markerOptions: {
+				     iconName: "small_red"
+				    }
+				  }, {
+				    where: "OPERADORA = 'TIM'",
+				    markerOptions: {
+				     iconName: "small_blue"
+				    }
+				  }]
 			});
-			
+
 			camada.setMap(map);
 		}
 		
@@ -201,14 +227,26 @@
 		}
 
 		function filtraOperadora(strOperadora) {
-		
-			camada.setOptions({
-				query:{
-					select: 'LATLONG',
-					from: table,
-					where: "OPERADORA = '" + strOperadora + "'"
-				}
-			});
+
+			if (strOperadora == "*") {
+				camada.setOptions({
+					query:{
+						select: 'LATLONG',
+						from: table
+					}
+				});
+			}
+			else {
+				camada.setOptions({
+					query:{
+						select: 'LATLONG',
+						from: table,
+						where: "OPERADORA = '" + strOperadora + "'"
+					}
+				});
+			}
+
+			
 		}
 		
 		
@@ -273,6 +311,11 @@
 						});
 
 						markers.push(marker);
+
+						curPos = curPos.replace('(','');
+						curPos = curPos.replace(')','');
+
+						//var distance = google.maps.geometry.spherical.computeDistanceBetween(curPos, coordinate);
 					}
 				});
 			}
@@ -312,14 +355,19 @@
 	<br/>
 	<select onchange="filtraOperadora(this.value)">
 		<option value="" selected>Escolha a operadora:</option>
+		<option value="*">Todas</option>
 		<option value="VIVO">Vivo</option>
 		<option value="OI">Oi</option>
+		<option value="TIM">Tim</option>
+		<option value="CLARO">Claro</option>
 	</select><br/><br/>
 	<input type="button" value="ERB Mais Próxima" onclick="ERBMaisProxima()" style="width:95%">
 	<br/><br/>
-	<input type="button" value="Lipar Marcadores" onclick="deleteMarkers()" style="width:95%">
+	<input type="button" value="Limpar Marcadores" onclick="deleteMarkers()" style="width:95%">
 </div>
 <div id="content"></div>
-<script src="https://www.googleapis.com/fusiontables/v1/tables/13IE1y4uyM5kgSAMdzku5BgsB7E0jBdankS0_eT73/templates?callback=handler&key=AIzaSyCyRa1MbHNk5ZaMYae7F4MvrNYh30631JU"></script>
+<!-- <script src="https://www.googleapis.com/fusiontables/v1/tables/13IE1y4uyM5kgSAMdzku5BgsB7E0jBdankS0_eT73/templates?callback=handler&key=AIzaSyCyRa1MbHNk5ZaMYae7F4MvrNYh30631JU"></script> -->
+
+
 </body>
 </html>
