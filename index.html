@@ -51,16 +51,18 @@
 		}
 		
 		#content {
-			float: left;
-			border: 1px solid #414B96;
-			background-color: #ffffff;
 			margin-top: 20px;
-			margin-right: 4pt;
+			margin-right: 5pt;
+			margin-left: 5pt;
 			text-align: center;
 			padding-top: 5px;
 			font-family: trebuchet, verdana, arial, sans-serif;
 			font-size: 10pt;
 			color: #414B96;
+			padding: 10px;
+			border: 1px solid #9CB1DE;
+			background-color: #CDDFEE;
+			visibility: hidden;
 		}
 		
 		input[type="button"] {
@@ -94,11 +96,12 @@
 			background-color: #ffffff;
 			width: 95%;
 		}
+
 		</style>
 		<link href="/apis/fusiontables/docs/samples/style/default.css" rel="stylesheet" type="text/css">
 		<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script>
 		<script type="text/javascript" src="http://www.google.com/jsapi"></script>
-		<script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?key=AIzaSyCyRa1MbHNk5ZaMYae7F4MvrNYh30631JU&sensor=true"></script>
+		<script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?v=3.exp&libraries=geometry&key=AIzaSyCyRa1MbHNk5ZaMYae7F4MvrNYh30631JU&sensor=true"></script>
 		
 		<script type="text/javascript">
 		
@@ -108,6 +111,8 @@
 		var table = '18itv4yUsMdcLar7agvT5iXOL-lLL38VLFua3HHfJ';
 		var curPos;
 		var markers = [];
+		var camadaLinha;
+		var strOperadora = "*";
 		
 		google.load('visualization', '1');
 		
@@ -125,6 +130,7 @@
 			loadERBs();
 			
 			geocoder = new google.maps.Geocoder();
+
 		}
 		
 		function loadERBs() {
@@ -226,7 +232,9 @@
 		  }
 		}
 
-		function filtraOperadora(strOperadora) {
+		function filtraOperadora(op) {
+
+			strOperadora = op;
 
 			if (strOperadora == "*") {
 				camada.setOptions({
@@ -246,7 +254,15 @@
 				});
 			}
 
-			
+			if (camadaLinha) {
+				camadaLinha.setMap(null);
+			}
+
+			if (markers.length > 1) {
+				ultMark = markers.length - 1;
+				markers[ultMark].setMap(null);
+			}
+		
 		}
 		
 		
@@ -256,7 +272,12 @@
 				alert("ATENÇÃO:\nPosicione-se primeiro no mapa, clicando em 'Onde estou?' ou localizando um endereço.");
 			}
 			else {
-				var query = "SELECT LATLONG FROM " + table + " ORDER BY ST_DISTANCE(LATLONG, LATLNG" + curPos + ") LIMIT 1";
+				if (strOperadora == "*") {
+					var query = "SELECT LATLONG FROM " + table + " ORDER BY ST_DISTANCE(LATLONG, LATLNG" + curPos + ") LIMIT 1";
+				}
+				else {
+					var query = "SELECT LATLONG FROM " + table + " WHERE OPERADORA = '" + strOperadora + "' ORDER BY ST_DISTANCE(LATLONG, LATLNG" + curPos + ") LIMIT 1";
+				}
 				var encquery = encodeURIComponent(query);
 				var gvizQuery = new google.visualization.Query('http://www.google.com/fusiontables/gvizdata?tq=' + encquery);
 				gvizQuery.send(function(response) {
@@ -265,8 +286,6 @@
 					}
 					else {
 						var stringCoordinates = response.getDataTable().getValue(0, 0);
-						
-						var conteudo = document.getElementById("content");
 						
 						var lat = stringCoordinates.substr(0, 14);
 						var lng = stringCoordinates.substr(14, 14);
@@ -301,8 +320,6 @@
 						fLat = parseFloat(aLat[0]) + (parseFloat(aLat[1]) * modLat / 60) + (parseFloat(aLat[2]) * modLat /(60*60));
 						fLng = parseFloat(aLng[0]) + (parseFloat(aLng[1]) * modLng /60) + (parseFloat(aLng[2]) * modLng /(60*60));
 						
-						conteudo.innerHTML = "<pre>" + fLat + "," + fLng + "</pre>";
-						
 						var coordinate = new google.maps.LatLng(fLat, fLng);
 						var marker = new google.maps.Marker({
 							map: map,
@@ -310,12 +327,54 @@
 							animation: google.maps.Animation.DROP
 						});
 
+						var ultMark;
+
+						if (markers.length > 1) {
+							ultMark = markers.length - 1;
+							markers[ultMark].setMap(null);
+						}
+
 						markers.push(marker);
 
-						curPos = curPos.replace('(','');
-						curPos = curPos.replace(')','');
+						try {
+							var strCurPos = String(curPos);
+							strCurPos= strCurPos.replace('(','');
+							strCurPos = strCurPos.replace(')','');
+							strCurPos = strCurPos.replace(' ','');
 
-						//var distance = google.maps.geometry.spherical.computeDistanceBetween(curPos, coordinate);
+							var arrCurPos = strCurPos.split(',');
+
+							var origem = new google.maps.LatLng(arrCurPos[0], arrCurPos[1]);
+							var distance = google.maps.geometry.spherical.computeDistanceBetween(origem, coordinate);
+
+							var envelope = new google.maps.LatLngBounds();
+							envelope.extend(origem);
+							envelope.extend(coordinate);
+							map.fitBounds(envelope);
+
+							if (camadaLinha) {
+								camadaLinha.setMap(null);
+							}
+
+							var linha = [origem,coordinate];
+
+							camadaLinha = new google.maps.Polyline({
+								path: linha,
+								strokeColor: "#FF0000",
+							    strokeOpacity: 1.0,
+							    strokeWeight: 2
+							});
+
+							camadaLinha.setMap(map);
+
+							var conteudo = document.getElementById("content");
+							conteudo.style.visibility = "visible";
+							conteudo.innerHTML = "Distância aproximada entre o local e a ERB mais próxima: " + 
+												Math.round(distance) + " metros.";
+						}
+						catch(err) {
+							alert(err.message);
+						}
 					}
 				});
 			}
@@ -328,12 +387,19 @@
 		}
 		
 		function clearMarkers() {
-		  setAllMap(null);
+			setAllMap(null);
 		}
 		
 		function deleteMarkers() {
-		  clearMarkers();
-		  markers = [];
+			clearMarkers();
+			markers = [];
+
+			camadaLinha.setMap(null);
+
+		  	var conteudo = document.getElementById("content");
+			conteudo.style.visibility = "hidden";
+			conteudo.innerHTML = "";
+			curPos = null;
 		}
 		
 		</script>
@@ -363,11 +429,10 @@
 	</select><br/><br/>
 	<input type="button" value="ERB Mais Próxima" onclick="ERBMaisProxima()" style="width:95%">
 	<br/><br/>
-	<input type="button" value="Limpar Marcadores" onclick="deleteMarkers()" style="width:95%">
+	<input type="button" value="Limpar Tudo" onclick="deleteMarkers()" style="width:95%">
+	<br/><br/>
+	<div id="content"></div>
 </div>
-<div id="content"></div>
-<!-- <script src="https://www.googleapis.com/fusiontables/v1/tables/13IE1y4uyM5kgSAMdzku5BgsB7E0jBdankS0_eT73/templates?callback=handler&key=AIzaSyCyRa1MbHNk5ZaMYae7F4MvrNYh30631JU"></script> -->
-
 
 </body>
 </html>
